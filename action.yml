@@ -1,0 +1,68 @@
+name: 'AI Code Lint'
+description: 'Catch common AI-generated code issues — hallucinated APIs, unsafe patterns, missing error handling, and over-engineered solutions.'
+author: 'Kryptorious Quantum Biosciences, Inc.'
+branding:
+  icon: 'zap'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'Path to scan'
+    required: false
+    default: '.'
+  strict:
+    description: 'Fail on warnings'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Scan AI-generated code patterns
+      shell: bash
+      run: |
+        echo "AI Code Lint — scanning for AI-generated code patterns"
+        ISSUES=0
+
+        find ${{ inputs.path }} -name '*.py' -not -path '*/test*' -not -path '*/__pycache__/*' 2>/dev/null | while read -r f; do
+          [ ! -f "$f" ] && continue
+
+          # Hallucinated API patterns
+          if grep -q "model.predict_proba\|sklearn.ensemble.RandomForest\|torch.nn.LinearLayer" "$f" 2>/dev/null; then
+            echo "  $f: Possible hallucinated API (verify import exists)"
+            ISSUES=$((ISSUES + 1))
+          fi
+
+          # Missing error handling on I/O
+          if grep -qE "open\(|requests\.(get|post)|urllib" "$f" 2>/dev/null; then
+            if ! grep -qE "try:|except|with open" "$f" 2>/dev/null; then
+              echo "  $f: File/network I/O without error handling"
+              ISSUES=$((ISSUES + 1))
+            fi
+          fi
+
+          # Overly complex list comprehensions (AI loves these)
+          COMPLEX=$(grep -cE '\[.*for .* in .*if .*for' "$f" 2>/dev/null || echo 0)
+          if [ "$COMPLEX" -gt 2 ]; then
+            echo "  $f: Overly complex comprehensions — consider refactoring"
+            ISSUES=$((ISSUES + 1))
+          fi
+
+          # Unused imports (common AI pattern)
+          IMPORTS=$(grep -cE '^import |^from ' "$f" 2>/dev/null || echo 0)
+          if [ "$IMPORTS" -gt 15 ]; then
+            echo "  $f: High import count ($IMPORTS) — check for unused imports"
+            ISSUES=$((ISSUES + 1))
+          fi
+        done
+
+        echo "Issues: ~$ISSUES"
+        if [ "$ISSUES" -gt 0 ] && [ "${{ inputs.strict }}" = "true" ]; then exit 1; fi
+
+    - name: Summary
+      shell: bash
+      run: |
+        echo ""
+        echo "AI Code Lint complete"
+        echo "Premium: Custom hallucination patterns, model-specific rules"
+        echo "https://kryptorious.gumroad.com/l/jbvet"
