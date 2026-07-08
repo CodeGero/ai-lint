@@ -24,7 +24,7 @@ runs:
         echo "AI Code Lint — scanning for AI-generated code patterns"
         ISSUES=0
 
-        find ${{ inputs.path }} -name '*.py' -not -path '*/test*' -not -path '*/__pycache__/*' 2>/dev/null | while read -r f; do
+        while read -r f; do
           [ ! -f "$f" ] && continue
 
           # Hallucinated API patterns
@@ -54,7 +54,7 @@ runs:
             echo "  $f: High import count ($IMPORTS) — check for unused imports"
             ISSUES=$((ISSUES + 1))
           fi
-        done
+        done < <(find ${{ inputs.path }} -name '*.py' -not -path '*/test*' -not -path '*/__pycache__/*' 2>/dev/null)
 
         echo "Issues: ~$ISSUES"
         if [ "$ISSUES" -gt 0 ] && [ "${{ inputs.strict }}" = "true" ]; then exit 1; fi
